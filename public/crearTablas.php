@@ -58,7 +58,7 @@ try {
         instagram VARCHAR(100) NOT NULL,
         email VARCHAR(100) NOT NULL,
         direccion VARCHAR(255) NOT NULL,
-        facebook VARCHAR(100) NOT NULL,
+        facebook VARCHAR(100) NOT NULL
     )";
     crearTablaSiNoExiste($conexion, 'contacto', $consultaContacto);
 
@@ -110,9 +110,9 @@ try {
         apellido VARCHAR(100) NOT NULL,
         dni VARCHAR(100) NOT NULL,
         telefono VARCHAR(30) NOT NULL,
-        ciudad VARCHAR(100) NOT NULL,
-        direccion VARCHAR(255) NOT NULL,
-        codigoPostal VARCHAR(100) NOT NULL,
+        ciudad VARCHAR(50),
+        direccion VARCHAR(50),
+        codigoPostal VARCHAR(11),
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )";
     crearTablaSiNoExiste($conexion, 'usuarios', $consultaUsuarios);
@@ -138,6 +138,37 @@ try {
 
     echo "Usuario admin creado correctamente.";
 
+    // crear tabla de pedidos
+
+
+    $consultaOpcionEnvio = "CREATE TABLE IF NOT EXISTS `opcionEnvio` (
+        idOpcionEnvio INT PRIMARY KEY AUTO_INCREMENT,
+        ciudad VARCHAR(50),
+        idUsuario INT,
+        direccion VARCHAR(50),
+        codigoPostal VARCHAR(11)
+    )";
+    crearTablaSiNoExiste($conexion, 'opcionEnvio', $consultaOpcionEnvio);
+
+
+    $consultaRetiro = "CREATE TABLE `retiros` (
+    idRetiro INT AUTO_INCREMENT PRIMARY KEY,
+    idUsuario INT,
+    tienda VARCHAR(255) NOT NULL
+)";
+    crearTablaSiNoExiste($conexion, 'retiros', $consultaRetiro);
+
+    $consultaPedidos = "CREATE TABLE IF NOT EXISTS `pedidos`(
+        idPedido INT PRIMARY KEY AUTO_INCREMENT,
+        idUsuario INT,
+        fechaPedido DATETIME DEFAULT CURRENT_TIMESTAMP,
+        total DECIMAL(10,2),
+        idOpcionEnvio INT,
+        estado VARCHAR(50) DEFAULT 'pendiente',
+        FOREIGN KEY (idUsuario) REFERENCES usuarios(idUsuario),
+        FOREIGN KEY (idOpcionEnvio) REFERENCES opcionesEnvio(idOpcionEnvio)
+    )";
+    crearTablaSiNoExiste($conexion, 'pedidos', $consultaPedidos);
     echo "Proceso de creación de tablas finalizado.";
 } catch (PDOException $error) {
     echo "Error de conexión: " . $error->getMessage();
