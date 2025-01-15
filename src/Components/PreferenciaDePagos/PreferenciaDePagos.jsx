@@ -2,22 +2,26 @@ import { useState, useEffect } from "react";
 import baseURL from "../url";
 import "./PreferenciaDePago.css";
 
-const PreferenciaDePagos = () => {
+const PreferenciaDePagos = ({precio}) => {
   // creando la petición para la preferencia de pago
   const [productos, setProductos] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [quantity, setQuantity] = useState(1);
 
+  console.log(precio);
   // Función para obtener los productos
   const fetchProductos = async () => {
     try {
       const response = await fetch(`${baseURL}/productosGet.php`);
       const data = await response.json();
+      console.log(data);
       setProductos(data.productos);
     } catch (error) {
       console.error("Error al cargar productos:", error);
     }
   };
+
+
 
   // Cargar los productos al iniciar
   useEffect(() => {
@@ -47,12 +51,12 @@ const PreferenciaDePagos = () => {
       return;
     }
 
-    const { titulo, idProducto, precio } = cartItems[0]; // Accede directamente al producto
+    const { titulo, idProducto} = cartItems[0]; // Accede directamente al producto
     console.log("Datos enviados al backend:", {
       idProducto,
       titulo,
       quantity,
-      precio,
+      precio
     });
 
     try {
@@ -70,14 +74,15 @@ const PreferenciaDePagos = () => {
       );
 
       const data = await response.json();
-      console.log("Respuesta del backend:", data.data.id);
+      console.log("Respuesta del backend:", data.data);
 
       if (data) {
         const mp = new window.MercadoPago(
           "APP_USR-ac48bda1-5b83-4dd2-9c82-e562e4d9c9c8",
           {
             locale: "es-AR",
-          }
+
+          },
         );
 
         mp.checkout({
@@ -85,6 +90,7 @@ const PreferenciaDePagos = () => {
             id: data.data.id,
           },
           autoOpen: true,
+
         });
       } else {
         console.error("Error: No se recibió un ID de preferencia válido");

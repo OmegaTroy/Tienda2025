@@ -1,0 +1,1 @@
+export const costeDeEnvio = 1000

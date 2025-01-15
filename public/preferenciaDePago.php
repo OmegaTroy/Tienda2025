@@ -38,11 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $preference = $client->create([
     'items' => array(
       array(
-        'id' => '1',
-        'title' => 'Producto 1',
-        'quantity' => 1,
+        'id' => $data['id'],
+        'title' => $data['title'],
+        'quantity' => $data['quantity'],
         'currency_id' => 'ARS',
-        'unit_price' => 1000,
+        'unit_price' => $data['price'],
       )
     ),
     'statement_descriptor' => 'Tienda Virtualtech',
@@ -50,6 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   ]);
 
   $preference->back_urls = array(
+    'success' => "http://localhost:8080/tienda2025/public/success.php",
+    'failure' => "http://localhost:8080/tienda2025/public/failure.php",
+  );
+  $preference->redirect_urls = array(
     'success' => "http://localhost:8080/tienda2025/public/success.php",
     'failure' => "http://localhost:8080/tienda2025/public/failure.php",
   );

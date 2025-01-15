@@ -5,7 +5,8 @@ header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 // Cargar variables de entorno desde el archivo .env
-require __DIR__.'/vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
+
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__);
@@ -158,4 +159,3 @@ try {
 } catch (PDOException $error) {
     echo json_encode(["error" => "Error de conexión: " . $error->getMessage()]);
 }
-?>

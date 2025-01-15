@@ -1,21 +1,31 @@
 import { useState, useEffect } from "react";
-import "./Pagos.css";
 import baseURL from "../../Components/url";
+import { costeDeEnvio } from "../../util/util";
 import PreferenciaDePagos from "../../Components/PreferenciaDePagos/PreferenciaDePagos";
+import { useEnvio } from "../../hooks/useEnvio";
+import React from "react";
+import { toast, ToastContainer } from "react-toastify";
 
 const Checkout = () => {
-  const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [productos, setProductos] = useState([]);
   const [cartItems, setCartItems] = useState([]);
+  const [ciudad, setCiudad] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [codigoPostal, setCodigoPostal] = useState("");
+  const [tienda, setTienda] = useState("");
+  const [precio, setPrecio] = useState(0);
+  const [precioTotal, setPrecioTotal] = useState(0);
   const [deliveryMethod, setDeliveryMethod] = useState("delivery");
+  const [isValidEnvio, setIsValidEnvio] = useState(false);
+  const [isEnvioConfirmed, setIsEnvioConfirmed] = useState(false); // Nuevo estado
+  const { fetchEnvio, fetchRetiro, data } = useEnvio();
 
   // Función para obtener los productos
   const fetchProductos = async () => {
     try {
       const response = await fetch(`${baseURL}/productosGet.php`);
-      const data = await response.json();
-      setProductos(data.productos);
+      const dataJson = await response.json();
+      setProductos(dataJson.productos);
     } catch (error) {
       console.error("Error al cargar productos:", error);
     }
@@ -31,27 +41,83 @@ const Checkout = () => {
     if (productos.length > 0) {
       const productosId = JSON.parse(localStorage.getItem("cart")) || [];
       const productosDelCarrito = productosId.map((item) => {
-        return productos.find(
+        const producto = productos.find(
           (producto) => producto.idProducto === item.idProducto
         );
+        return { ...producto, cantidad: item.cantidad || 1 };
       });
-      setCartItems(productosDelCarrito.filter(Boolean)); // Filtrar posibles elementos no encontrados
+      setCartItems(productosDelCarrito.filter(Boolean));
     }
-  }, [productos]); // Solo se ejecuta cuando 'productos' cambia
+  }, [productos]);
 
-  // Manejo de la cantidad
-  const handleQuantityChange = (action) => {
-    if (action === "decrease" && quantity > 1) {
-      setQuantity((prev) => prev - 1);
-    } else if (action === "increase") {
-      setQuantity((prev) => prev + 1);
+  // Cálculo del precio total
+  useEffect(() => {
+    const total = cartItems.reduce(
+      (acc, item) => acc + item.precio * item.cantidad,
+      0
+    );
+    setPrecio(total);
+    setPrecioTotal(total + costeDeEnvio);
+  }, [cartItems]);
+
+  // Validar datos de envío
+  useEffect(() => {
+    if (direccion && ciudad && codigoPostal) {
+      setIsValidEnvio(true);
+    } else {
+      setIsValidEnvio(false);
+    }
+  }, [direccion, ciudad, codigoPostal]);
+
+  // Enviar datos de envío
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = await localStorage.getItem("token");
+      const usuario = JSON.parse(token);
+      const idUsuario = usuario.usuario.idUsuario;
+      if (idUsuario !== null) {
+        await fetchEnvio(ciudad, idUsuario, direccion, codigoPostal);
+        console.log(data);
+        if (data.ok) {
+          // Verifica que la respuesta del servidor indique éxito
+          setIsEnvioConfirmed(true);
+        } else {
+          toast.error("Hubo un error al confirmar los datos de envío.");
+        }
+      } else {
+        toast.error("No se encontró el usuario.");
+      }
+    } catch (error) {
+      toast.error("Hubo un error al confirmar los datos de envío.");
     }
   };
 
-  // Función para procesar el pago
-
+  const handleRetiroSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = await localStorage.getItem("token");
+      const usuario = JSON.parse(token);
+      const idUsuario = usuario.usuario.idUsuario;
+      if (idUsuario !== null) {
+        const response = await fetchRetiro(idUsuario, tienda);
+        console.log(data);
+        if (response.ok) {
+          // Verifica que la respuesta del servidor indique éxito
+          setIsEnvioConfirmed(true);
+        } else {
+          toast.error("Hubo un error al confirmar los datos de envío.");
+        }
+      } else {
+        toast.error("No se encontró el usuario.");
+      }
+    } catch (error) {
+      toast.error("Hubo un error al confirmar los datos de envío.");
+    }
+  };
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb", padding: "1rem" }}>
+      <ToastContainer />
       <div
         style={{
           maxWidth: "1280px",
@@ -92,13 +158,15 @@ const Checkout = () => {
           </div>
 
           {deliveryMethod === "delivery" && (
-            <div className="form-section">
+            <form onSubmit={handleSubmit} className="form-section">
               <h2>Dirección de envío</h2>
               <div className="form-field">
                 <label name="direccion">Dirección</label>
                 <input
                   id="direccion"
                   name="direccion"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
                   type="text"
                   required
                   placeholder="Av. Principal 123"
@@ -110,6 +178,8 @@ const Checkout = () => {
                   <input
                     id="ciudad"
                     name="ciudad"
+                    value={ciudad}
+                    onChange={(e) => setCiudad(e.target.value)}
                     type="text"
                     required
                     placeholder="Ciudad"
@@ -120,16 +190,21 @@ const Checkout = () => {
                   <input
                     id="codigoPostal"
                     name="codigoPostal"
+                    value={codigoPostal}
+                    onChange={(e) => setCodigoPostal(e.target.value)}
                     type="number"
                     required
                     placeholder="12345"
                   />
                 </div>
               </div>
-            </div>
+              <button className="btn" type="submit" disabled={!isValidEnvio}>
+                Confirmar datos de Envio
+              </button>
+            </form>
           )}
           {deliveryMethod === "pickup" && (
-            <div className="space-y-4">
+            <form onSubmit={handleRetiroSubmit} className="form-section">
               <h2 className="text-xl font-semibold">Punto de retiro</h2>
               <div className="space-y-2">
                 <label htmlFor="pickupLocation" className="block font-medium">
@@ -138,6 +213,10 @@ const Checkout = () => {
                 <select
                   id="pickupLocation"
                   className="w-full p-2 border rounded"
+                  onChange={(e) => {
+                    setTienda(e.target.value);
+                    console.log(e.target.value); // Agrega esta línea para verificar
+                  }}
                   required
                 >
                   <option value="">Selecciona una tienda</option>
@@ -146,126 +225,11 @@ const Checkout = () => {
                   <option value="store3">Tienda Sur</option>
                 </select>
               </div>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <div
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              padding: "1rem",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "1.25rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              Cesta ({cartItems.length})
-              <button
-                style={{
-                  color: "#2563eb",
-                  fontSize: "0.875rem",
-                  textDecoration: "underline",
-                }}
-              >
-                Borrar artículos seleccionados
+              <button className="btn" type="submit" disabled={!tienda}>
+                Confirmar datos de retiro
               </button>
-            </h2>
-            {cartItems.length === 0 ? (
-              <p>No hay productos en tu carrito.</p>
-            ) : (
-              cartItems.map((item, index) => (
-                <div
-                  key={index}
-                  style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}
-                >
-                  <img
-                    src={item.imagen || "/default-image.png"}
-                    alt={item.nombre}
-                    style={{
-                      width: "96px",
-                      height: "96px",
-                      borderRadius: "4px",
-                      objectFit: "cover",
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontWeight: "500" }}>{item.nombre}</h3>
-                    <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                      {item.descripcion || "Sin descripción"}
-                    </p>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: "1rem",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                        }}
-                      >
-                        <button
-                          onClick={() => handleQuantityChange("decrease")}
-                          style={{
-                            border: "1px solid #ddd",
-                            padding: "0.5rem",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          -
-                        </button>
-                        <span style={{ textAlign: "center", width: "32px" }}>
-                          {quantity}
-                        </span>
-                        <button
-                          onClick={() => handleQuantityChange("increase")}
-                          style={{
-                            border: "1px solid #ddd",
-                            padding: "0.5rem",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "1rem",
-                        }}
-                      >
-                        <button
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "#6b7280",
-                            cursor: "pointer",
-                          }}
-                        >
-                          🗑
-                        </button>
-                        <span style={{ fontWeight: "500" }}>
-                          AR${(item.precio * quantity).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+            </form>
+          )}
         </div>
 
         {/* Columna derecha - Resumen */}
@@ -281,12 +245,7 @@ const Checkout = () => {
             <div style={{ marginTop: "1rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>Subtotal</span>
-                <span>
-                  AR$
-                  {cartItems
-                    .reduce((acc, item) => acc + item.precio * quantity, 0)
-                    .toFixed(2)}
-                </span>
+                <span>AR${precio}</span>
               </div>
               <div
                 style={{
@@ -296,7 +255,7 @@ const Checkout = () => {
                 }}
               >
                 <span>Gastos de envío</span>
-                <span>AR$1000.00</span>
+                <span>AR${costeDeEnvio}</span>
               </div>
               <div
                 style={{
@@ -308,17 +267,16 @@ const Checkout = () => {
                 }}
               >
                 <span>Total estimado</span>
-                <span>
-                  AR$
-                  {(
-                    cartItems.reduce(
-                      (acc, item) => acc + item.precio * quantity,
-                      0
-                    ) + 1000
-                  ).toFixed(2)}
-                </span>
+                <span>AR${precioTotal}</span>
               </div>
-              <PreferenciaDePagos cartItems={cartItems} quantity={quantity} />
+              {isEnvioConfirmed ? (
+                <PreferenciaDePagos
+                  precio={precioTotal}
+                  cartItems={cartItems}
+                />
+              ) : (
+                <span>Confirma los datos de envío para proceder al pago.</span>
+              )}
             </div>
           </div>
         </div>
