@@ -2,26 +2,20 @@ import { useState, useEffect } from "react";
 import baseURL from "../url";
 import "./PreferenciaDePago.css";
 
-const PreferenciaDePagos = ({precio}) => {
-  // creando la petición para la preferencia de pago
+const PreferenciaDePagos = ({ precio }) => {
   const [productos, setProductos] = useState([]);
   const [cartItems, setCartItems] = useState([]);
-  const [quantity, setQuantity] = useState(1);
 
-  console.log(precio);
   // Función para obtener los productos
   const fetchProductos = async () => {
     try {
       const response = await fetch(`${baseURL}/productosGet.php`);
       const data = await response.json();
-      console.log(data);
       setProductos(data.productos);
     } catch (error) {
       console.error("Error al cargar productos:", error);
     }
   };
-
-
 
   // Cargar los productos al iniciar
   useEffect(() => {
@@ -33,17 +27,20 @@ const PreferenciaDePagos = ({precio}) => {
     const productosFechado = async () => {
       if (productos.length > 0) {
         const productosId = JSON.parse(localStorage.getItem("cart")) || [];
-        setQuantity(productosId[0].cantidad);
         const productosDelCarrito = productosId.map((item) => {
-          return productos.find(
+          const producto = productos.find(
             (producto) => producto.idProducto === item.idProducto
           );
+          return producto
+            ? { ...producto, cantidad: item.cantidad || 1 }
+            : null;
         });
-        await setCartItems(productosDelCarrito.filter(Boolean)); // Filtrar posibles elementos no encontrados
+        console.log(productosDelCarrito);
+        setCartItems(productosDelCarrito.filter(Boolean));
       }
     };
     productosFechado();
-  }, [productos]); // Solo se ejecuta cuando 'productos' cambia
+  }, [productos]);
 
   const createPreference = async () => {
     if (cartItems.length === 0) {
@@ -51,38 +48,33 @@ const PreferenciaDePagos = ({precio}) => {
       return;
     }
 
-    const { titulo, idProducto} = cartItems[0]; // Accede directamente al producto
-    console.log("Datos enviados al backend:", {
-      idProducto,
-      titulo,
-      quantity,
-      precio
-    });
+    const productsForPreference = cartItems.map((item) => ({
+      id: item.idProducto,
+      title: item.titulo, // Usar 'nombre' en lugar de 'titulo' si es el campo correcto
+      quantity: item.cantidad,
+      price: item.precio,
+    }));
 
     try {
       const response = await fetch(
         `http://localhost:8080/tienda2025/public/preferenciaDePago.php`,
         {
           method: "POST",
-          body: JSON.stringify({
-            id: idProducto,
-            title: titulo,
-            quantity: quantity,
-            price: precio,
-          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ products: productsForPreference }),
         }
       );
 
       const data = await response.json();
-      console.log("Respuesta del backend:", data.data);
-
-      if (data) {
+      console.log(data);
+      if (data && data.data) {
         const mp = new window.MercadoPago(
           "APP_USR-ac48bda1-5b83-4dd2-9c82-e562e4d9c9c8",
           {
             locale: "es-AR",
-
-          },
+          }
         );
 
         mp.checkout({
@@ -90,7 +82,6 @@ const PreferenciaDePagos = ({precio}) => {
             id: data.data.id,
           },
           autoOpen: true,
-
         });
       } else {
         console.error("Error: No se recibió un ID de preferencia válido");
@@ -99,6 +90,7 @@ const PreferenciaDePagos = ({precio}) => {
       console.error("Error al crear la preferencia:", error);
     }
   };
+
   return (
     <button onClick={createPreference} className="mp-button">
       Pagar con Mercado Pago

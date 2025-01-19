@@ -17,17 +17,21 @@ const Checkout = () => {
   const [precioTotal, setPrecioTotal] = useState(0);
   const [deliveryMethod, setDeliveryMethod] = useState("delivery");
   const [isValidEnvio, setIsValidEnvio] = useState(false);
-  const [isEnvioConfirmed, setIsEnvioConfirmed] = useState(false); // Nuevo estado
+  const [isEnvioConfirmed, setIsEnvioConfirmed] = useState(false);
   const { fetchEnvio, fetchRetiro, data } = useEnvio();
 
   // Función para obtener los productos
   const fetchProductos = async () => {
     try {
       const response = await fetch(`${baseURL}/productosGet.php`);
+      if (!response.ok) {
+        throw new Error("Error al cargar productos");
+      }
       const dataJson = await response.json();
       setProductos(dataJson.productos);
     } catch (error) {
       console.error("Error al cargar productos:", error);
+      toast.error("No se pudieron cargar los productos.");
     }
   };
 
@@ -44,7 +48,7 @@ const Checkout = () => {
         const producto = productos.find(
           (producto) => producto.idProducto === item.idProducto
         );
-        return { ...producto, cantidad: item.cantidad || 1 };
+        return producto ? { ...producto, cantidad: item.cantidad || 1 } : null;
       });
       setCartItems(productosDelCarrito.filter(Boolean));
     }
@@ -57,33 +61,26 @@ const Checkout = () => {
       0
     );
     setPrecio(total);
-    setPrecioTotal(total + costeDeEnvio);
+    setPrecioTotal(total);
   }, [cartItems]);
 
   // Validar datos de envío
   useEffect(() => {
-    if (direccion && ciudad && codigoPostal) {
-      setIsValidEnvio(true);
-    } else {
-      setIsValidEnvio(false);
-    }
+    setIsValidEnvio(!!direccion && !!ciudad && !!codigoPostal);
   }, [direccion, ciudad, codigoPostal]);
 
   // Enviar datos de envío
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = await localStorage.getItem("token");
-      const usuario = JSON.parse(token);
-      const idUsuario = usuario.usuario.idUsuario;
-      if (idUsuario !== null) {
+      const token = localStorage.getItem("token");
+      const usuario = token ? JSON.parse(token) : null;
+      const idUsuario = usuario?.usuario?.idUsuario;
+
+      if (idUsuario) {
         await fetchEnvio(ciudad, idUsuario, direccion, codigoPostal);
-        console.log(data);
-        if (data.ok) {
-          // Verifica que la respuesta del servidor indique éxito
+        if (data?.ok) {
           setIsEnvioConfirmed(true);
-        } else {
-          toast.error("Hubo un error al confirmar los datos de envío.");
         }
       } else {
         toast.error("No se encontró el usuario.");
@@ -96,25 +93,25 @@ const Checkout = () => {
   const handleRetiroSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = await localStorage.getItem("token");
-      const usuario = JSON.parse(token);
-      const idUsuario = usuario.usuario.idUsuario;
-      if (idUsuario !== null) {
+      const token = localStorage.getItem("token");
+      const usuario = token ? JSON.parse(token) : null;
+      const idUsuario = usuario?.usuario?.idUsuario;
+
+      if (idUsuario) {
         const response = await fetchRetiro(idUsuario, tienda);
-        console.log(data);
-        if (response.ok) {
-          // Verifica que la respuesta del servidor indique éxito
+        if (response?.ok) {
           setIsEnvioConfirmed(true);
         } else {
-          toast.error("Hubo un error al confirmar los datos de envío.");
+          toast.error("Hubo un error al confirmar los datos de retiro.");
         }
       } else {
         toast.error("No se encontró el usuario.");
       }
     } catch (error) {
-      toast.error("Hubo un error al confirmar los datos de envío.");
+      toast.error("Hubo un error al confirmar los datos de retiro.");
     }
   };
+
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb", padding: "1rem" }}>
       <ToastContainer />
@@ -141,7 +138,7 @@ const Checkout = () => {
                   checked={deliveryMethod === "delivery"}
                   onChange={() => setDeliveryMethod("delivery")}
                 />
-                <label name="delivery">Envío a domicilio</label>
+                <label htmlFor="delivery">Envío a domicilio</label>
               </div>
               <div className="form-radio">
                 <input
@@ -152,7 +149,7 @@ const Checkout = () => {
                   checked={deliveryMethod === "pickup"}
                   onChange={() => setDeliveryMethod("pickup")}
                 />
-                <label name="pickup">Retiro en tienda</label>
+                <label htmlFor="pickup">Retiro en tienda</label>
               </div>
             </div>
           </div>
@@ -161,7 +158,7 @@ const Checkout = () => {
             <form onSubmit={handleSubmit} className="form-section">
               <h2>Dirección de envío</h2>
               <div className="form-field">
-                <label name="direccion">Dirección</label>
+                <label htmlFor="direccion">Dirección</label>
                 <input
                   id="direccion"
                   name="direccion"
@@ -174,7 +171,7 @@ const Checkout = () => {
               </div>
               <div className="form-grid">
                 <div className="form-field">
-                  <label name="ciudad">Ciudad</label>
+                  <label htmlFor="ciudad">Ciudad</label>
                   <input
                     id="ciudad"
                     name="ciudad"
@@ -186,7 +183,7 @@ const Checkout = () => {
                   />
                 </div>
                 <div className="form-field">
-                  <label name="codigoPostal">Código postal</label>
+                  <label htmlFor="codigoPostal">Código postal</label>
                   <input
                     id="codigoPostal"
                     name="codigoPostal"
@@ -199,10 +196,11 @@ const Checkout = () => {
                 </div>
               </div>
               <button className="btn" type="submit" disabled={!isValidEnvio}>
-                Confirmar datos de Envio
+                Confirmar datos de envío
               </button>
             </form>
           )}
+
           {deliveryMethod === "pickup" && (
             <form onSubmit={handleRetiroSubmit} className="form-section">
               <h2 className="text-xl font-semibold">Punto de retiro</h2>
@@ -213,10 +211,7 @@ const Checkout = () => {
                 <select
                   id="pickupLocation"
                   className="w-full p-2 border rounded"
-                  onChange={(e) => {
-                    setTienda(e.target.value);
-                    console.log(e.target.value); // Agrega esta línea para verificar
-                  }}
+                  onChange={(e) => setTienda(e.target.value)}
                   required
                 >
                   <option value="">Selecciona una tienda</option>
@@ -247,16 +242,7 @@ const Checkout = () => {
                 <span>Subtotal</span>
                 <span>AR${precio}</span>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: "0.5rem",
-                }}
-              >
-                <span>Gastos de envío</span>
-                <span>AR${costeDeEnvio}</span>
-              </div>
+
               <div
                 style={{
                   display: "flex",

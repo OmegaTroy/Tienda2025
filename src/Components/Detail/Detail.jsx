@@ -22,7 +22,6 @@ import baseURL from "../url";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import DetailLoading from "../DetailLoading/DetailLoading";
-import PreferenciaDePagos from "../PreferenciaDePagos/PreferenciaDePagos";
 
 export default function Detail() {
   const navigate = useNavigate();
@@ -257,7 +256,6 @@ export default function Detail() {
     fetchCartItems();
   }, [productos, isFocused]);
 
-  console.log(productos);
   const obtenerImagen = (item) => {
     return item.imagen1 || item.imagen2 || item.imagen3 || item.imagen4 || null;
   };
@@ -719,7 +717,6 @@ export default function Detail() {
                 >
                   Continuar
                 </Anchor>
-
                 <div className="deFLexBtns">
                   <button className="btnWpp" onClick={openModal2}>
                     Pedir por WhatsApp
