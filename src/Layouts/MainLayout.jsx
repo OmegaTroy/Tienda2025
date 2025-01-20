@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Spiner from "../Components/Admin/Spiner/Spiner";
+import Auth from "../Components/Admin/Auth/Auth";
 import { Outlet, useNavigate } from "react-router-dom";
 import baseURL from "../Components/url";
 
@@ -37,5 +38,20 @@ export default function MainLayout() {
     fetchData();
   }, [navigate]);
 
-  return <div>{loading ? <Spiner /> : <Outlet />}</div>;
+  return (
+    <div>
+      <div>
+        {loading ? (
+          <Spiner />
+        ) : user.idUsuario ? (
+          <>
+            <Outlet />
+          </>
+        ) : (
+          // <Outlet />
+          <Auth />
+        )}
+      </div>
+    </div>
+  );
 }
