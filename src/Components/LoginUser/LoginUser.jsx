@@ -5,22 +5,49 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./LoginUser.css";
 import { useNavigate } from "react-router";
-import useLogin from "../../hooks/UserGet";
-// import baseURL from "../url";
+import baseURL from "../url";
 
-export default function LoginUser({ toggleComponent }) {
+export default function LoginUser() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loading, error, userData } = useLogin();
-
   const navigate = useNavigate();
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    login(email, password); // Llama al hook con las credenciales
-    navigate("/");
+    try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("contrasena", password);
+      formData.append("rolLogin", "usuario");
+      formData.append("iniciar_sesion", true);
+
+      const response = await fetch(`${baseURL}/login.php`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.mensaje) {
+          console.log(data.mensaje);
+          toast.success(data.mensaje);
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 2000);
+        } else if (data.error) {
+          setErrorMessage(data.error);
+          console.log(data.error);
+          toast.error(data.error);
+        }
+      } else {
+        throw new Error("Error en la solicitud al servidor");
+      }
+    } catch (error) {
+      console.error("Error:", error.message);
+      toast.error(error.message);
+    }
   };
 
   return (
