@@ -16,6 +16,7 @@ import ProtectedRoute from "./ProtectedRoute/ProtectedRoute";
 import AuthUser from "../Components/AuthUser/Auth";
 import RegisterUser from "../Components/Register/RegisterUser";
 import Pagos from "../Pages/Pagos/Pagos";
+import Auth from "../Components/Admin/Auth/Auth";
 
 export const router = createBrowserRouter([
   {
@@ -83,6 +84,10 @@ export const router = createBrowserRouter([
       {
         path: `/dashboard/codigos`,
         element: <Codigos />,
+      },
+      {
+        path: `/dashboard/auth`,
+        element: <Auth />,
       },
     ],
   },

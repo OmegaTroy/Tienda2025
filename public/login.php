@@ -25,6 +25,7 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $emailLogin = $_POST['email'];
         $contrasenaLogin = $_POST['contrasena'];
+        // $rolLogin = $_POST['rolLogin'];
 
         // Verificar las credenciales del usuario
         $sqlCheckCredenciales = "SELECT idUsuario, nombre, email, contrasena, rol FROM `usuarios` WHERE email = :email";
@@ -35,6 +36,7 @@ try {
         if ($stmtCheckCredenciales->rowCount() > 0) {
             $row = $stmtCheckCredenciales->fetch(PDO::FETCH_ASSOC);
             $contrasenaHash = $row['contrasena'];
+            $rolLogin = $row['rol'];
 
             if (password_verify($contrasenaLogin, $contrasenaHash)) {
                 // Iniciar sesión solo si el rol es 'admin'
@@ -48,10 +50,14 @@ try {
                     "idUsuario" => $row['idUsuario'],
                     "nombre" => $row['nombre'],
                     "email" => $row['email'],
-                    "rol" => $row['rol']
+                    "rol" => $row['rol'],
                 ];
 
-                echo json_encode(["mensaje" => "Inicio de sesión exitoso como administrador", "redirect" => "dashboard.php", "usuario" => $usuario]);
+                if ($rolLogin === 'admin') {
+                    echo json_encode(["mensaje" => "Inicio de sesión exitoso como administrador", "redirect" => "/dashboard", "usuario" => $usuario]);
+                } else {
+                    echo json_encode(["mensaje" => "Inicio de sesión exitoso.", "redirect" => "/login", "usuario" => $usuario]);
+                }
             } else {
                 echo json_encode(["error" => "Contraseña incorrecta"]);
             }

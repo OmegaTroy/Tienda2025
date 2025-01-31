@@ -7,7 +7,8 @@ const useLogin = () => {
   const [userData, setUserData] = useState(null); // Estado para almacenar los datos del usuario
 
   const login = async (email, password) => {
-    setLoading(true); // Activa el estado de carga
+    setLoading(true);
+    setError(null);
 
     const formData = new FormData();
     formData.append("email", email);
@@ -16,24 +17,30 @@ const useLogin = () => {
     try {
       const response = await fetch(`${baseURL}login.php`, {
         method: "POST",
-        body: formData, // Envío de datos
+        body: formData,
       });
 
-      const data = await response.json(); // Obtiene la respuesta del servidor
-      console.log(data);
-      if (response.ok) {
-        setUserData(data); // Si la autenticación es exitosa, almacena los datos del usuario
-        localStorage.setItem("token", JSON.stringify(data)); // Guarda el token en localStorage (si es un JWT)
-        setError(null); // Resetea cualquier error previo
+      const data = await response.json(); // Obtiene la respuesta del backend
+      console.log("Respuesta del servidor:", data);
+
+      if (response.ok && data.mensaje) {
+        setUserData(data.usuario);
+        localStorage.setItem("token", JSON.stringify(data.usuario)); // Guarda solo los datos del usuario
+        return { success: true, message: data.mensaje };
       } else {
-        setError(data.message || "Error al autenticar"); // Muestra el error si la autenticación falla
-        setUserData(null); // Resetea los datos del usuario en caso de error
+        setUserData(null);
+        setError(data.error || "Credenciales incorrectas");
+        return {
+          success: false,
+          message: data.error || "Credenciales incorrectas",
+        };
       }
     } catch (err) {
-      setError("Error de conexión"); // Maneja los errores de la red
-      setUserData(null); // Resetea los datos del usuario en caso de error
+      setUserData(null);
+      setError("Error de conexión");
+      return { success: false, message: "Error de conexión" };
     } finally {
-      setLoading(false); // Desactiva el estado de carga después de la solicitud
+      setLoading(false);
     }
   };
 

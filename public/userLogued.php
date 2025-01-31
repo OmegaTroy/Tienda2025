@@ -3,7 +3,8 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *'); // Permitir solicitudes desde cualquier origen (no seguro para producción)
 
 // Cargar variables de entorno desde el archivo .env
-require __DIR__.'/vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
+
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__);
@@ -62,4 +63,3 @@ try {
     // Cerrar la conexión a la base de datos
     $conexion = null;
 }
-?>

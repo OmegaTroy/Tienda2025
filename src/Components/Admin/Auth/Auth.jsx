@@ -13,9 +13,6 @@ export default function Auth() {
 
   return (
     <div className="AuthContainer">
-      <Anchor to={`/`}>
-        <img src={logo} alt="Efecto Vial" className="logoAtuh" />
-      </Anchor>
       <Login />
     </div>
   );

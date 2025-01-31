@@ -1,55 +1,40 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./LoginUser.css";
 import { useNavigate } from "react-router";
-import baseURL from "../url";
+import useLogin from "../../hooks/UserGet";
+// import baseURL from "../url";
 
-export default function LoginUser() {
+export default function LoginUser({ toggleComponent }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const { login, error } = useLogin();
   const navigate = useNavigate();
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    try {
-      const formData = new FormData();
-      formData.append("email", email);
-      formData.append("contrasena", password);
-      formData.append("rolLogin", "usuario");
-      formData.append("iniciar_sesion", true);
+    const response = await login(email, password);
 
-      const response = await fetch(`${baseURL}/login.php`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.mensaje) {
-          console.log(data.mensaje);
-          toast.success(data.mensaje);
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 2000);
-        } else if (data.error) {
-          setErrorMessage(data.error);
-          console.log(data.error);
-          toast.error(data.error);
-        }
-      } else {
-        throw new Error("Error en la solicitud al servidor");
-      }
-    } catch (error) {
-      console.error("Error:", error.message);
-      toast.error(error.message);
+    if (response?.success) {
+      toast.success(response?.message);
+      setTimeout(() => navigate("/"), 2000);
+    } else {
+      toast.error(response?.error || "Error al iniciar sesión");
+      setTimeout(() => navigate("/authUser"), 2000);
     }
   };
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
   return (
     <div className="formContain">
       <ToastContainer />
